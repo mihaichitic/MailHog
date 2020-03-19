@@ -56,7 +56,8 @@ func main() {
 	//5. also do I need to bring the entire message in frontend? in listing? with full body+attachments? maybe this helps the listing loading   ->   0%, not optimal but it works now with 2. solved
 	//6. TODO there is too much processing in receiving a mail too, if an attachment of 6MB, it takes minutes to receive the email; it analyses every line in message and concatenating
 
-	//build and tun with: go build -o build/MailHog main.go && ./build/MailHog
+	//build and tun with: CGO_ENABLED=0 go build -a -ldflags '-extldflags "-static"' -o build/MailHog main.go && ./build/MailHog
+	//use those build flags so the binary to work on golang:alpine docker too
 
 	if len(os.Args) > 1 && (os.Args[1] == "-version" || os.Args[1] == "--version") {
 		fmt.Println("MailHog version: " + version)
