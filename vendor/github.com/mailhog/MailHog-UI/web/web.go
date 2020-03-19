@@ -2,10 +2,13 @@ package web
 
 import (
 	"bytes"
+	"errors"
 	"html/template"
+	"io/ioutil"
 	"log"
 	"mime"
 	"net/http"
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -45,7 +48,8 @@ func CreateWeb(cfg *config.Config, r http.Handler, asset func(string) ([]byte, e
 func (web Web) Static(pattern string) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, req *http.Request) {
 		fp := strings.TrimSuffix(pattern, "{{file}}") + req.URL.Query().Get(":file")
-		if b, err := web.asset(fp); err == nil {
+		//if b, err := web.asset(fp); err == nil {
+		if b, err := webAssetWrapper(web, fp); err == nil {
 			ext := filepath.Ext(fp)
 
 			w.Header().Set("Content-Type", mime.TypeByExtension(ext))
@@ -62,10 +66,20 @@ func (web Web) Index() func(http.ResponseWriter, *http.Request) {
 	tmpl := template.New("index.html")
 	tmpl.Delims("[:", ":]")
 
-	asset, err := web.asset("assets/templates/index.html")
+	//asset, err := web.asset("assets/templates/index.html")
+	asset, err := webAssetWrapper(web, "assets/templates/index.html")
 	if err != nil {
 		log.Fatalf("[UI] Error loading index.html: %s", err)
 	}
+
+	//asset, err := readLocalAsset("assets/templates/index.html")
+	//if err != nil {
+	//	log.Printf("Fallback to builtin asset assets/templates/index.html")
+	//	asset, err = web.asset("assets/templates/index.html")
+	//	if err != nil {
+	//		log.Fatalf("[UI] Error loading index.html: %s", err)
+	//	}
+	//}
 
 	tmpl, err = tmpl.Parse(string(asset))
 	if err != nil {
@@ -75,10 +89,20 @@ func (web Web) Index() func(http.ResponseWriter, *http.Request) {
 	layout := template.New("layout.html")
 	layout.Delims("[:", ":]")
 
-	asset, err = web.asset("assets/templates/layout.html")
+	//asset, err = web.asset("assets/templates/layout.html")
+	asset, err = webAssetWrapper(web, "assets/templates/layout.html")
 	if err != nil {
 		log.Fatalf("[UI] Error loading layout.html: %s", err)
 	}
+
+	//asset, err = readLocalAsset("assets/templates/layout.html")
+	//if err != nil {
+	//	log.Printf("Fallback to builtin asset assets/templates/layout.html")
+	//	asset, err = web.asset("assets/templates/layout.html")
+	//	if err != nil {
+	//		log.Fatalf("[UI] Error loading layout.html: %s", err)
+	//	}
+	//}
 
 	layout, err = layout.Parse(string(asset))
 	if err != nil {
@@ -116,4 +140,41 @@ func (web Web) Index() func(http.ResponseWriter, *http.Request) {
 		w.WriteHeader(200)
 		w.Write(b.Bytes())
 	}
+}
+
+func webAssetWrapper(web Web, assetPath string) ([]byte, error) {
+	asset, err := readLocalAsset(assetPath)
+	if err != nil {
+		log.Printf("Fallback to builtin asset %s", assetPath)
+		asset, err = web.asset(assetPath)
+	}
+
+	return asset, nil
+}
+
+// read asset from disk if exists
+func readLocalAsset(assetPath string) ([]byte, error) {
+	//currentPath, err := os.Getwd()
+	//if err != nil {
+	//	log.Fatalf("[UI] Error loading %s: %s", assetPath, err)
+	//}
+
+	ex, err := os.Executable()
+	if err != nil {
+		log.Fatalf("[UI] Error loading %s: %s", assetPath, err)
+	}
+	currentPath := filepath.Dir(ex)
+
+	absoluteAssetPath := currentPath + "/" + assetPath;
+	log.Printf("Reading local asset %s\n", absoluteAssetPath)
+	if _, err := os.Stat(absoluteAssetPath); err != nil {
+		return []byte{}, errors.New("Asset could not be found on disk")
+	}
+
+	asset, err := ioutil.ReadFile(absoluteAssetPath)
+	if err != nil {
+		log.Fatalf("[UI] Error loading %s: %s", assetPath, err)
+	}
+
+	return asset, nil
 }

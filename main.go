@@ -15,7 +15,7 @@ import (
 	"github.com/mailhog/MailHog-UI/assets"
 	cfgui "github.com/mailhog/MailHog-UI/config"
 	"github.com/mailhog/MailHog-UI/web"
-	cfgcom "github.com/mailhog/MailHog/config"
+	cfgcom "MailHog/config"
 	"github.com/mailhog/http"
 	"github.com/mailhog/mhsendmail/cmd"
 	"golang.org/x/crypto/bcrypt"
@@ -41,6 +41,23 @@ func configure() {
 }
 
 func main() {
+	// to restore original asset from src/MailHog/vendor/github.com/mailhog/MailHog-UI/assets/assets.go, modify and probably having to deploy along with the binary
+	// check in https://github.com/mailhog/MailHog-UI the original assets
+	//err := assets.RestoreAsset("/go/src/MailHog/dist","assets/templates/index.html")
+	//err := assets.RestoreAsset("/go/src/MailHog/dist","assets/js/controllers.js")
+	//fmt.Printf("%#v\n\n", err)
+	//return
+
+	//we want to solve the following:
+	//1. sorting   ->   100%; | orderBy:'Created':true in /go/src/MailHog/dist/assets/templates/index.html, we need to build it again in assets, else we need the file, but it's also hackish
+	//2. load fast even with large attachments   ->   100%; in github.com/mailhog/data/message.go FromBytes use bytes.Buffer to concatenate strings
+	//3. show/mark the email has attachment, either in listing or in preview, preferable both   ->   100%; added paperclip icon on listing and Attachment lines in preview; extract only filename with new methid in controllers.js parseAttachmentName
+	//4. show all the recipients on To:, preferrable separated To. Cc. Bcc.   ->   100%; we add on To: all recipients; from them you can find in Cc: which were in fact Cc-ed; Bcc: could not be extracted separately, it's included in To:
+	//5. also do I need to bring the entire message in frontend? in listing? with full body+attachments? maybe this helps the listing loading   ->   0%, not optimal but it works now with 2. solved
+	//6. TODO there is too much processing in receiving a mail too, if an attachment of 6MB, it takes minutes to receive the email; it analyses every line in message and concatenating
+
+	//build and tun with: go build -o build/MailHog main.go && ./build/MailHog
+
 	if len(os.Args) > 1 && (os.Args[1] == "-version" || os.Args[1] == "--version") {
 		fmt.Println("MailHog version: " + version)
 		os.Exit(0)

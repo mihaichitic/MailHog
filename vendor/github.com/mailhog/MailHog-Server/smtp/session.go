@@ -114,8 +114,10 @@ func (c *Session) logf(message string, args ...interface{}) {
 
 // Read reads from the underlying net.TCPConn
 func (c *Session) Read() bool {
-	buf := make([]byte, 1024)
+	buf := make([]byte, 1024*1024)
+	c.logf("Reading ...\n")
 	n, err := c.reader.Read(buf)
+	c.logf("Red \n")
 
 	if n == 0 {
 		c.logf("Connection closed by remote host\n")
@@ -131,12 +133,15 @@ func (c *Session) Read() bool {
 	text := string(buf[0:n])
 	logText := strings.Replace(text, "\n", "\\n", -1)
 	logText = strings.Replace(logText, "\r", "\\r", -1)
-	c.logf("Received %d bytes: '%s'\n", n, logText)
+	//c.logf("Received %d bytes: '%s'\n", n, logText)
+	c.logf("Received %d bytes'\n", n)
 
 	c.line += text
 
 	for strings.Contains(c.line, "\r\n") {
+		c.logf("Parsing ...\n")
 		line, reply := c.proto.Parse(c.line)
+		c.logf("Parsed\n")
 		c.line = line
 
 		if reply != nil {
@@ -158,6 +163,7 @@ func (c *Session) Write(reply *smtp.Reply) {
 		logText := strings.Replace(l, "\n", "\\n", -1)
 		logText = strings.Replace(logText, "\r", "\\r", -1)
 		c.logf("Sent %d bytes: '%s'", len(l), logText)
+		//c.logf("Sent %d bytes", len(l))
 		c.writer.Write([]byte(l))
 	}
 }

@@ -6,6 +6,7 @@ import (
 	"encoding/base64"
 	"io"
 	"log"
+	"math"
 	"mime"
 	"strings"
 	"time"
@@ -166,7 +167,11 @@ func (m *SMTPMessage) Bytes() io.Reader {
 func FromBytes(b []byte) *SMTPMessage {
 	msg := &SMTPMessage{}
 	var headerDone bool
-	for _, l := range strings.Split(string(b), "\n") {
+
+	var buffer bytes.Buffer
+
+	lines := strings.Split(string(b), "\n")
+	for _, l := range lines {
 		if !headerDone {
 			if strings.HasPrefix(l, "HELO:<") {
 				l = strings.TrimPrefix(l, "HELO:<")
@@ -191,8 +196,11 @@ func FromBytes(b []byte) *SMTPMessage {
 				continue
 			}
 		}
-		msg.Data += l + "\n"
+		buffer.WriteString(l + "\n")
+		//msg.Data += l + "\n"
 	}
+	msg.Data = buffer.String()
+
 	return msg
 }
 
@@ -282,7 +290,7 @@ func PathFromString(path string) *Path {
 
 // ContentFromString parses SMTP content into separate headers and body
 func ContentFromString(data string) *Content {
-	logf("Parsing Content from string: '%s'", data)
+	logf("Parsing Content from string: '%s'", data[0:int(math.Min(100, float64(len(data))))])
 	x := strings.SplitN(data, "\r\n\r\n", 2)
 	h := make(map[string][]string, 0)
 
